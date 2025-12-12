@@ -1,0 +1,900 @@
+blueprint_type: rework
+created: 2025-12-12
+rework_reason: "Replace direct API calls (Anthropic/OpenAI/Gemini) with Claude Code SDK for headless agent integration"
+affected_scope: "Backend FastAPI routes, LLM client layer, WebSocket streaming protocol"
+tracking_method: document
+
+project_overview:
+  brief: "Rework screenshot-to-code backend to use Claude Code SDK (@anthropic-ai/claude-agent-sdk) as the code generation engine instead of direct API calls. Preserve all 11 core features while eliminating API key consumption by leveraging user's Claude Code subscription."
+
+  core_objectives:
+    - "Replace all direct API calls (Anthropic/OpenAI/Gemini) with Claude Code SDK headless mode"
+    - "Preserve all 11 core features: variants, preview, history, streaming, updates, etc."
+    - "Maintain WebSocket streaming protocol for real-time frontend updates"
+    - "Implement session management for multi-turn code updates"
+    - "Achieve zero API key consumption (use Claude Code subscription instead)"
+
+  current_state_analysis:
+    features_to_preserve:
+      - "NUM_VARIANTS (4) - parallel variant generation"
+      - "WebSocket streaming - real-time code chunks"
+      - "History system - commit chain with parent references"
+      - "Select & Edit - variant selection and updates"
+      - "Model selection - cycle through available models"
+      - "Image generation - DALL-E 3 / Flux Schnell"
+      - "Video-to-code - screen recording support"
+      - "Stack support - 6 stacks (React, Vue, Bootstrap, etc.)"
+      - "Prompt system - create/update prompts"
+      - "Error handling - per-variant error states"
+      - "Debug mode - logging and inspection"
+
+    api_integration_points:
+      - "backend/routes/generate_code.py - WebSocket route handler"
+      - "backend/models/claude.py - Anthropic streaming"
+      - "backend/models/openai_client.py - OpenAI streaming"
+      - "backend/models/gemini.py - Gemini streaming"
+      - "backend/llm.py - Model enum and constants"
+      - "backend/config.py - API key configuration"
+
+  technical_constraints:
+    - "Claude Code SDK is Node.js based - requires subprocess or API wrapper"
+    - "Frontend React app remains unchanged (existing WebSocket protocol)"
+    - "Poetry backend (Python 3.12) - may need Node.js bridge"
+    - "Session UUIDs must be stored for multi-turn updates"
+    - "Variant system must generate 4 concurrent outputs"
+
+architecture:
+  pattern: layered
+  rationale: "Existing screenshot-to-code uses layered architecture (routes → models → prompts). Maintain consistency by adding Claude Code adapter layer between routes and models."
+
+  integration_strategy: |
+    OPTION A: Python subprocess wrapper
+    - Use subprocess.Popen to invoke `claude` CLI
+    - Parse --output-format stream-json via stdout
+    - Map to existing WebSocket protocol
+
+    OPTION B: Node.js bridge service
+    - Create FastAPI → Express bridge
+    - Use @anthropic-ai/claude-agent-sdk directly
+    - WebSocket proxy between services
+
+    OPTION C: Direct SDK port (Python)
+    - Use claude-agent-sdk Python package
+    - Native integration without subprocess
+    - Requires Python SDK availability check
+
+    RECOMMENDED: Start with Option C (Python SDK), fallback to Option A if unavailable
+
+milestones:
+  milestone_1:
+    name: "Phase 1 - Research & Foundation"
+    timeline_weeks: "1-2"
+    description: "Validate Claude Code SDK capabilities, resolve architectural unknowns, and establish integration patterns"
+
+    epics:
+      epic_1:
+        name: "Technical Spikes"
+        description: "Resolve high-uncertainty decisions before implementation"
+
+        feature_1_1:
+          name: "Spike: Claude Code SDK Integration Pattern"
+          complexity:
+            composite: 3.5
+            dimensions:
+              technical_complexity: 4
+              scope_size: 3
+              dependencies: 3
+              uncertainty: 5
+              risk: 3
+              testing: 2
+          estimated_days: 3
+          needs_spike: true
+          spike_reason: "Uncertainty ≥4: Unknown if Python SDK exists, subprocess overhead unclear, session management pattern undefined"
+
+          deliverables:
+            - "Research claude-agent-sdk availability (Python vs Node.js only)"
+            - "Validate headless mode: claude -p 'prompt' --output-format stream-json"
+            - "Test session resume: claude --resume <uuid> for multi-turn updates"
+            - "Measure subprocess overhead vs API call latency"
+            - "Document recommended integration pattern (Option A/B/C)"
+            - "Create POC: Single variant generation with streaming"
+
+        feature_1_2:
+          name: "Spike: Variant Generation Strategy"
+          complexity:
+            composite: 3.8
+            dimensions:
+              technical_complexity: 4
+              scope_size: 3
+              dependencies: 4
+              uncertainty: 5
+              risk: 3
+              testing: 3
+          estimated_days: 3
+          needs_spike: true
+          spike_reason: "Uncertainty ≥4: Unknown how to generate 4 concurrent variants with Claude Code. Options: multiple sessions, temperature variation, prompt engineering?"
+
+          deliverables:
+            - "Test concurrent Claude Code sessions (4 parallel invocations)"
+            - "Validate if temperature parameter works in headless mode"
+            - "Explore prompt variation strategies for diverse outputs"
+            - "Benchmark variant generation time vs current API approach"
+            - "Document recommended variant strategy with tradeoffs"
+            - "Create POC: 4 concurrent variants with different approaches"
+
+        feature_1_3:
+          name: "Spike: Session & State Management"
+          complexity:
+            composite: 3.2
+            dimensions:
+              technical_complexity: 3
+              scope_size: 3
+              dependencies: 3
+              uncertainty: 4
+              risk: 3
+              testing: 3
+          estimated_days: 2
+          needs_spike: true
+          spike_reason: "Uncertainty ≥4: Session UUID storage strategy unclear. Frontend state? Backend DB? How to map variants to sessions?"
+
+          deliverables:
+            - "Test session persistence: Store UUID, resume with update prompt"
+            - "Validate session lifecycle: Create → Update → Update → Cleanup"
+            - "Design session-to-variant mapping (1:1 or shared session?)"
+            - "Evaluate storage options: In-memory dict, Redis, SQLite"
+            - "Document session management architecture"
+            - "Create POC: Multi-turn update flow with session resume"
+
+      epic_2:
+        name: "Architecture & Design"
+        description: "Finalize integration architecture based on spike findings"
+
+        feature_2_1:
+          name: "Design Claude Code Adapter Layer"
+          complexity:
+            composite: 2.8
+            dimensions:
+              technical_complexity: 3
+              scope_size: 3
+              dependencies: 3
+              uncertainty: 2
+              risk: 3
+              testing: 3
+          estimated_days: 2
+          depends_on: ["feature_1_1", "feature_1_2", "feature_1_3"]
+
+          task_2_1_1:
+            name: "Create ClaudeCodeClient interface specification"
+            complexity:
+              composite: 2.0
+            estimated_days: 0.5
+            description: "Define abstract interface matching existing stream_claude_response API signature"
+
+          task_2_1_2:
+            name: "Design session manager component"
+            complexity:
+              composite: 2.5
+            estimated_days: 1
+            description: "Session UUID storage, lifecycle hooks, cleanup policies"
+
+          task_2_1_3:
+            name: "Map Claude Code JSON stream to WebSocket protocol"
+            complexity:
+              composite: 2.5
+            estimated_days: 0.5
+            description: "Transform --output-format stream-json to existing MessageType format"
+
+        feature_2_2:
+          name: "Update System Architecture Documentation"
+          complexity:
+            composite: 1.5
+            dimensions:
+              technical_complexity: 1
+              scope_size: 2
+              dependencies: 2
+              uncertainty: 1
+              risk: 1
+              testing: 2
+          estimated_days: 1
+
+          task_2_2_1:
+            name: "Document new backend architecture diagram"
+            complexity:
+              composite: 1.5
+            estimated_days: 0.5
+            description: "Routes → ClaudeCodeAdapter → Claude SDK → WebSocket"
+
+          task_2_2_2:
+            name: "Update API integration decision record"
+            complexity:
+              composite: 1.5
+            estimated_days: 0.5
+            description: "Document rationale for SDK migration, tradeoffs, rollback plan"
+
+  milestone_2:
+    name: "Phase 2 - Core Integration"
+    timeline_weeks: "3-5"
+    description: "Implement Claude Code SDK adapter, replace API calls, maintain backward compatibility"
+
+    epics:
+      epic_3:
+        name: "Claude Code SDK Adapter Implementation"
+        description: "Build adapter layer translating Claude Code SDK to existing interfaces"
+
+        feature_3_1:
+          name: "Implement ClaudeCodeClient class"
+          complexity:
+            composite: 3.5
+            dimensions:
+              technical_complexity: 4
+              scope_size: 4
+              dependencies: 4
+              uncertainty: 3
+              risk: 3
+              testing: 3
+          estimated_days: 5
+          needs_decomposition: true
+          decomposition_reason: "High technical complexity (4) and scope (4) - subprocess management, stream parsing, error handling complex"
+
+          task_3_1_1:
+            name: "Create base ClaudeCodeClient with subprocess wrapper"
+            complexity:
+              composite: 3.2
+            estimated_days: 2
+            description: "subprocess.Popen management, stdio streaming, process lifecycle"
+
+          task_3_1_2:
+            name: "Implement JSON stream parser"
+            complexity:
+              composite: 2.5
+            estimated_days: 1
+            description: "Parse --output-format stream-json, handle chunk boundaries, error states"
+
+          task_3_1_3:
+            name: "Map to WebSocket MessageType protocol"
+            complexity:
+              composite: 2.8
+            estimated_days: 1
+            description: "Transform SDK events to chunk/status/setCode/error messages"
+
+          task_3_1_4:
+            name: "Add error handling and recovery"
+            complexity:
+              composite: 3.0
+            estimated_days: 1
+            description: "Process crashes, timeout handling, graceful degradation"
+
+        feature_3_2:
+          name: "Implement SessionManager"
+          complexity:
+            composite: 2.8
+            dimensions:
+              technical_complexity: 3
+              scope_size: 3
+              dependencies: 3
+              uncertainty: 2
+              risk: 3
+              testing: 3
+          estimated_days: 3
+
+          task_3_2_1:
+            name: "Create session storage backend"
+            complexity:
+              composite: 2.5
+            estimated_days: 1
+            description: "In-memory dict or Redis, UUID generation, TTL policies"
+
+          task_3_2_2:
+            name: "Implement session resume logic"
+            complexity:
+              composite: 3.0
+            estimated_days: 1.5
+            description: "claude --resume <uuid> invocation, state validation"
+
+          task_3_2_3:
+            name: "Add session cleanup and monitoring"
+            complexity:
+              composite: 2.5
+            estimated_days: 0.5
+            description: "Garbage collection, max session limits, health checks"
+
+        feature_3_3:
+          name: "Variant Generation Orchestrator"
+          complexity:
+            composite: 3.2
+            dimensions:
+              technical_complexity: 4
+              scope_size: 3
+              dependencies: 3
+              uncertainty: 3
+              risk: 3
+              testing: 3
+          estimated_days: 4
+
+          task_3_3_1:
+            name: "Implement parallel variant spawner"
+            complexity:
+              composite: 3.0
+            estimated_days: 2
+            description: "asyncio.gather with 4 ClaudeCodeClient instances, variant indexing"
+
+          task_3_3_2:
+            name: "Apply variant diversity strategy"
+            complexity:
+              composite: 3.5
+            estimated_days: 1.5
+            description: "Temperature variation, prompt engineering, or separate sessions based on spike findings"
+
+          task_3_3_3:
+            name: "Aggregate variant results and stream to frontend"
+            complexity:
+              composite: 2.5
+            estimated_days: 0.5
+            description: "Collect completions, send variantComplete messages, handle partial failures"
+
+      epic_4:
+        name: "Backend Route Refactoring"
+        description: "Replace existing API calls with Claude Code adapter"
+
+        feature_4_1:
+          name: "Refactor generate_code.py WebSocket route"
+          complexity:
+            composite: 3.8
+            dimensions:
+              technical_complexity: 4
+              scope_size: 4
+              dependencies: 4
+              uncertainty: 2
+              risk: 4
+              testing: 4
+          estimated_days: 5
+          needs_decomposition: true
+          decomposition_reason: "High risk (4) and testing complexity (4) - critical path, must maintain backward compatibility"
+
+          task_4_1_1:
+            name: "Replace ModelSelectionStage with ClaudeCodeClient"
+            complexity:
+              composite: 3.5
+            estimated_days: 2
+            description: "Remove stream_claude_response/stream_openai_response calls, inject ClaudeCodeClient"
+
+          task_4_1_2:
+            name: "Update PipelineContext for session management"
+            complexity:
+              composite: 2.8
+            estimated_days: 1
+            description: "Add session_ids field, track variant-to-session mapping"
+
+          task_4_1_3:
+            name: "Preserve existing WebSocket protocol"
+            complexity:
+              composite: 3.0
+            estimated_days: 1
+            description: "Ensure chunk/status/setCode messages unchanged for frontend compatibility"
+
+          task_4_1_4:
+            name: "Add backward compatibility toggle"
+            complexity:
+              composite: 2.5
+            estimated_days: 1
+            description: "Environment flag to switch between SDK and legacy API calls for testing"
+
+        feature_4_2:
+          name: "Update configuration management"
+          complexity:
+            composite: 2.0
+            dimensions:
+              technical_complexity: 2
+              scope_size: 2
+              dependencies: 2
+              uncertainty: 1
+              risk: 2
+              testing: 2
+          estimated_days: 2
+
+          task_4_2_1:
+            name: "Add USE_CLAUDE_CODE_SDK environment flag"
+            complexity:
+              composite: 1.8
+            estimated_days: 0.5
+            description: "config.py: bool flag for SDK vs API mode"
+
+          task_4_2_2:
+            name: "Remove API key requirements when SDK enabled"
+            complexity:
+              composite: 2.0
+            estimated_days: 0.5
+            description: "Conditional validation: Skip ANTHROPIC_API_KEY check if SDK mode"
+
+          task_4_2_3:
+            name: "Add Claude CLI path configuration"
+            complexity:
+              composite: 2.0
+            estimated_days: 0.5
+            description: "CLAUDE_CLI_PATH env var, default to 'claude' in PATH"
+
+          task_4_2_4:
+            name: "Update settings UI for SDK mode"
+            complexity:
+              composite: 2.5
+            estimated_days: 0.5
+            description: "Frontend settings dialog: Show SDK mode status, toggle if available"
+
+  milestone_3:
+    name: "Phase 3 - Feature Preservation & Testing"
+    timeline_weeks: "6-7"
+    description: "Validate all 11 core features work with Claude Code SDK, fix regressions"
+
+    epics:
+      epic_5:
+        name: "Feature Validation"
+        description: "Test each core feature end-to-end with SDK integration"
+
+        feature_5_1:
+          name: "Validate variant system (NUM_VARIANTS=4)"
+          complexity:
+            composite: 2.5
+            dimensions:
+              technical_complexity: 2
+              scope_size: 3
+              dependencies: 3
+              uncertainty: 2
+              risk: 3
+              testing: 3
+          estimated_days: 3
+
+          task_5_1_1:
+            name: "Test 4 parallel variant generation"
+            complexity:
+              composite: 2.5
+            estimated_days: 1
+            description: "Create request → Verify 4 variants streamed → Check diversity"
+
+          task_5_1_2:
+            name: "Validate variant keyboard shortcuts (Alt+1/2/3/4)"
+            complexity:
+              composite: 2.0
+            estimated_days: 0.5
+            description: "Frontend: Switch between variants, verify selected variant persists"
+
+          task_5_1_3:
+            name: "Test variant error handling"
+            complexity:
+              composite: 2.5
+            estimated_days: 1
+            description: "Simulate SDK crash for variant 2, verify others complete, error UI shows"
+
+          task_5_1_4:
+            name: "Verify variant grid layouts (2x2)"
+            complexity:
+              composite: 1.5
+            estimated_days: 0.5
+            description: "Check responsive grid adapts to 4 variants correctly"
+
+        feature_5_2:
+          name: "Validate history & update system"
+          complexity:
+            composite: 3.0
+            dimensions:
+              technical_complexity: 3
+              scope_size: 3
+              dependencies: 3
+              uncertainty: 2
+              risk: 3
+              testing: 4
+          estimated_days: 4
+
+          task_5_2_1:
+            name: "Test commit chain creation"
+            complexity:
+              composite: 3.0
+            estimated_days: 1.5
+            description: "Create → Update → Update: Verify parent references, history sidebar"
+
+          task_5_2_2:
+            name: "Validate session resume for updates"
+            complexity:
+              composite: 3.5
+            estimated_days: 1.5
+            description: "Select variant → Make update → Verify SDK uses --resume <uuid>"
+
+          task_5_2_3:
+            name: "Test history navigation"
+            complexity:
+              composite: 2.5
+            estimated_days: 0.5
+            description: "Click previous commit → Verify code reverts, preview updates"
+
+          task_5_2_4:
+            name: "Verify history persistence across sessions"
+            complexity:
+              composite: 2.5
+            estimated_days: 0.5
+            description: "Refresh page → Check history retained, session IDs valid"
+
+        feature_5_3:
+          name: "Validate WebSocket streaming"
+          complexity:
+            composite: 2.3
+            dimensions:
+              technical_complexity: 2
+              scope_size: 2
+              dependencies: 3
+              uncertainty: 1
+              risk: 3
+              testing: 3
+          estimated_days: 2
+
+          task_5_3_1:
+            name: "Test real-time chunk streaming"
+            complexity:
+              composite: 2.5
+            estimated_days: 1
+            description: "Monitor WebSocket: Verify chunk messages arrive progressively, not in burst"
+
+          task_5_3_2:
+            name: "Validate status messages"
+            complexity:
+              composite: 2.0
+            estimated_days: 0.5
+            description: "Check status: 'Generating variant 1/4', 'Complete', etc."
+
+          task_5_3_3:
+            name: "Test WebSocket error recovery"
+            complexity:
+              composite: 2.5
+            estimated_days: 0.5
+            description: "Kill backend mid-stream → Verify frontend shows error, reconnect works"
+
+        feature_5_4:
+          name: "Validate remaining features (image gen, video, stacks)"
+          complexity:
+            composite: 2.5
+            dimensions:
+              technical_complexity: 2
+              scope_size: 3
+              dependencies: 2
+              uncertainty: 2
+              risk: 2
+              testing: 3
+          estimated_days: 3
+
+          task_5_4_1:
+            name: "Test image generation (DALL-E / Flux)"
+            complexity:
+              composite: 2.5
+            estimated_days: 1
+            description: "Verify image gen still uses REPLICATE_API_KEY, not affected by SDK"
+
+          task_5_4_2:
+            name: "Test video-to-code feature"
+            complexity:
+              composite: 2.5
+            estimated_days: 1
+            description: "Upload video → Verify SDK processes video frames, generates code"
+
+          task_5_4_3:
+            name: "Test all 6 stacks"
+            complexity:
+              composite: 2.5
+            estimated_days: 1
+            description: "Generate code for React, Vue, Bootstrap, Ionic, HTML+CSS, SVG stacks"
+
+      epic_6:
+        name: "Testing & Quality Assurance"
+        description: "Comprehensive test coverage for SDK integration"
+
+        feature_6_1:
+          name: "Write unit tests for ClaudeCodeClient"
+          complexity:
+            composite: 3.0
+            dimensions:
+              technical_complexity: 3
+              scope_size: 3
+              dependencies: 2
+              uncertainty: 2
+              risk: 2
+              testing: 5
+          estimated_days: 3
+
+          task_6_1_1:
+            name: "Mock subprocess for unit tests"
+            complexity:
+              composite: 3.0
+            estimated_days: 1
+            description: "Use unittest.mock for subprocess.Popen, control stdout/stderr"
+
+          task_6_1_2:
+            name: "Test JSON stream parsing edge cases"
+            complexity:
+              composite: 3.0
+            estimated_days: 1
+            description: "Partial chunks, malformed JSON, encoding issues"
+
+          task_6_1_3:
+            name: "Test error handling paths"
+            complexity:
+              composite: 3.0
+            estimated_days: 1
+            description: "Process crash, timeout, invalid session UUID"
+
+        feature_6_2:
+          name: "Write integration tests for variant generation"
+          complexity:
+            composite: 3.2
+            dimensions:
+              technical_complexity: 3
+              scope_size: 3
+              dependencies: 3
+              uncertainty: 2
+              risk: 3
+              testing: 4
+          estimated_days: 4
+
+          task_6_2_1:
+            name: "Test end-to-end variant flow"
+            complexity:
+              composite: 3.0
+            estimated_days: 2
+            description: "WebSocket client → Generate 4 variants → Verify completions"
+
+          task_6_2_2:
+            name: "Test session resume integration"
+            complexity:
+              composite: 3.5
+            estimated_days: 2
+            description: "Create → Select variant → Update → Verify session reused"
+
+        feature_6_3:
+          name: "Performance & load testing"
+          complexity:
+            composite: 2.8
+            dimensions:
+              technical_complexity: 3
+              scope_size: 2
+              dependencies: 2
+              uncertainty: 3
+              risk: 3
+              testing: 3
+          estimated_days: 3
+
+          task_6_3_1:
+            name: "Benchmark SDK vs API latency"
+            complexity:
+              composite: 3.0
+            estimated_days: 1.5
+            description: "Compare time-to-first-token, total generation time"
+
+          task_6_3_2:
+            name: "Test concurrent user load"
+            complexity:
+              composite: 3.0
+            estimated_days: 1.5
+            description: "Simulate 10 concurrent users generating variants, monitor memory/CPU"
+
+  milestone_4:
+    name: "Phase 4 - Documentation & Deployment"
+    timeline_weeks: "8"
+    description: "Complete documentation, deployment guides, user migration path"
+
+    epics:
+      epic_7:
+        name: "Documentation"
+        description: "Update all documentation for SDK integration"
+
+        feature_7_1:
+          name: "Update README and setup guides"
+          complexity:
+            composite: 2.0
+            dimensions:
+              technical_complexity: 1
+              scope_size: 3
+              dependencies: 1
+              uncertainty: 1
+              risk: 1
+              testing: 2
+          estimated_days: 2
+
+          task_7_1_1:
+            name: "Document Claude Code installation requirement"
+            complexity:
+              composite: 2.0
+            estimated_days: 0.5
+            description: "npm install -g @anthropic-ai/claude-agent-sdk setup instructions"
+
+          task_7_1_2:
+            name: "Update environment configuration docs"
+            complexity:
+              composite: 2.0
+            estimated_days: 0.5
+            description: "USE_CLAUDE_CODE_SDK=true, CLAUDE_CLI_PATH env vars"
+
+          task_7_1_3:
+            name: "Create migration guide from API to SDK"
+            complexity:
+              composite: 2.0
+            estimated_days: 0.5
+            description: "How to switch modes, what changes for users, rollback steps"
+
+          task_7_1_4:
+            name: "Update troubleshooting guide"
+            complexity:
+              composite: 2.0
+            estimated_days: 0.5
+            description: "Common SDK issues: PATH not found, session errors, etc."
+
+        feature_7_2:
+          name: "Create architecture documentation"
+          complexity:
+            composite: 2.5
+            dimensions:
+              technical_complexity: 2
+              scope_size: 3
+              dependencies: 1
+              uncertainty: 1
+              risk: 1
+              testing: 2
+          estimated_days: 2
+
+          task_7_2_1:
+            name: "Document ClaudeCodeClient architecture"
+            complexity:
+              composite: 2.5
+            estimated_days: 1
+            description: "Class diagram, sequence diagrams, component interactions"
+
+          task_7_2_2:
+            name: "Document session management design"
+            complexity:
+              composite: 2.5
+            estimated_days: 0.5
+            description: "Session lifecycle, storage strategy, cleanup policies"
+
+          task_7_2_3:
+            name: "Document variant generation strategy"
+            complexity:
+              composite: 2.5
+            estimated_days: 0.5
+            description: "How diversity is achieved, tradeoffs, configuration options"
+
+      epic_8:
+        name: "Deployment & Release"
+        description: "Prepare for production deployment"
+
+        feature_8_1:
+          name: "Create deployment configuration"
+          complexity:
+            composite: 2.3
+            dimensions:
+              technical_complexity: 2
+              scope_size: 2
+              dependencies: 3
+              uncertainty: 2
+              risk: 3
+              testing: 2
+          estimated_days: 2
+
+          task_8_1_1:
+            name: "Update Dockerfile for Claude CLI"
+            complexity:
+              composite: 2.5
+            estimated_days: 1
+            description: "Install Node.js + Claude SDK in Docker image"
+
+          task_8_1_2:
+            name: "Update docker-compose.yml"
+            complexity:
+              composite: 2.0
+            estimated_days: 0.5
+            description: "Add USE_CLAUDE_CODE_SDK env var, mount Claude config if needed"
+
+          task_8_1_3:
+            name: "Create production deployment guide"
+            complexity:
+              composite: 2.5
+            estimated_days: 0.5
+            description: "Cloud deployment considerations, scaling, monitoring"
+
+        feature_8_2:
+          name: "Release preparation"
+          complexity:
+            composite: 2.0
+            dimensions:
+              technical_complexity: 1
+              scope_size: 2
+              dependencies: 2
+              uncertainty: 1
+              risk: 2
+              testing: 2
+          estimated_days: 2
+
+          task_8_2_1:
+            name: "Write changelog for SDK integration"
+            complexity:
+              composite: 2.0
+            estimated_days: 0.5
+            description: "Document breaking changes, new features, migration notes"
+
+          task_8_2_2:
+            name: "Create release announcement"
+            complexity:
+              composite: 2.0
+            estimated_days: 0.5
+            description: "Benefits of SDK: no API keys, leverage Claude Code subscription"
+
+          task_8_2_3:
+            name: "Tag release version"
+            complexity:
+              composite: 1.5
+            estimated_days: 0.5
+            description: "Semantic versioning: v2.0.0 (major version for breaking change)"
+
+          task_8_2_4:
+            name: "Update hosted version (screenshottocode.com)"
+            complexity:
+              composite: 2.5
+            estimated_days: 0.5
+            description: "Deploy to production, monitor errors, rollback plan ready"
+
+risks_and_mitigations:
+  risk_1:
+    description: "Claude Code SDK subprocess overhead may be slower than direct API calls"
+    severity: "medium"
+    likelihood: "medium"
+    mitigation: "Benchmark early in Phase 1 spike. If unacceptable, explore Node.js bridge (Option B) or keep API as fallback mode."
+
+  risk_2:
+    description: "Variant generation diversity may be lower with single Claude model"
+    severity: "medium"
+    likelihood: "high"
+    mitigation: "Spike: Test temperature variation, prompt engineering, or separate session strategies. Document tradeoffs in Phase 1."
+
+  risk_3:
+    description: "Session management complexity may introduce state bugs"
+    severity: "high"
+    likelihood: "medium"
+    mitigation: "Comprehensive testing in Phase 3. Add session cleanup monitoring. Implement session timeout policies."
+
+  risk_4:
+    description: "Frontend compatibility breaks if WebSocket protocol changes"
+    severity: "high"
+    likelihood: "low"
+    mitigation: "Strict backward compatibility requirement. Integration tests validate exact message format."
+
+  risk_5:
+    description: "Claude Code SDK may not support all features (image gen, video)"
+    severity: "medium"
+    likelihood: "medium"
+    mitigation: "Hybrid approach: SDK for code generation, keep REPLICATE_API_KEY for image gen. Document in Phase 1."
+
+  risk_6:
+    description: "Docker deployment complexity increases with Node.js + Python"
+    severity: "low"
+    likelihood: "high"
+    mitigation: "Use official Node.js base image, install Python via apt. Document multi-stage build if needed."
+
+success_criteria:
+  - "All 11 core features pass end-to-end tests with SDK integration"
+  - "Variant generation produces 4 diverse outputs consistently"
+  - "Session resume works for multi-turn updates without errors"
+  - "WebSocket streaming latency comparable to API calls (within 20%)"
+  - "Zero API key consumption verified (no Anthropic/OpenAI calls)"
+  - "Docker deployment works with single docker-compose up command"
+  - "Migration guide enables users to switch modes without data loss"
+  - "Production deployment to screenshottocode.com succeeds without rollback"
+
+rollback_plan:
+  - "USE_CLAUDE_CODE_SDK=false environment flag reverts to API mode"
+  - "Keep legacy API client code intact during Phase 2-3"
+  - "Version control allows instant revert to pre-integration commit"
+  - "Production deployment uses blue/green strategy for safe rollback"
+
+notes:
+  - "Frontend React app requires ZERO changes - WebSocket protocol preserved"
+  - "NUM_VARIANTS=4 is current config - must maintain 4-variant generation"
+  - "Existing variant system uses model cycling (Claude/GPT) - SDK uses single model, need diversity strategy"
+  - "History system relies on parent commit references - session IDs must map correctly"
+  - "Image generation (DALL-E/Flux) is separate concern - keep existing REPLICATE_API_KEY integration"
+  - "Video-to-code feature must work with SDK - verify in Phase 1 spike"
+  - "Backend uses Poetry for package management - add Node.js bridge if needed"
+  - "Settings UI currently shows API keys - update to show SDK status instead"
