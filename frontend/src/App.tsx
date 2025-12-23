@@ -68,7 +68,6 @@ function App() {
       openAiApiKey: null,
       openAiBaseURL: null,
       anthropicApiKey: null,
-      screenshotOneApiKey: null,
       isImageGenerationEnabled: true,
       editorTheme: EditorTheme.COBALT,
       generatedCodeConfig: Stack.HTML_TAILWIND,
@@ -411,7 +410,6 @@ function App() {
           <StartPane
             doCreate={doCreate}
             importFromCode={importFromCode}
-            settings={settings}
           />
         )}
 
