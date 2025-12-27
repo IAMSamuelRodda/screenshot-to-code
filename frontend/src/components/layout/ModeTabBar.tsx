@@ -18,7 +18,7 @@ export function ModeTabBar() {
   ];
 
   return (
-    <div className="flex border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+    <div className="flex border-b border-border bg-gray-50 dark:bg-secondary">
       {tabs.map((tab) => {
         const isActive = activeMode === tab.mode;
         const isDisabled = tab.mode === "live-editor" && !projectPath;
@@ -32,8 +32,8 @@ export function ModeTabBar() {
               flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 transition-colors
               ${
                 isActive
-                  ? "border-blue-500 text-blue-600 dark:text-blue-400"
-                  : "border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                  ? "border-primary text-primary"
+                  : "border-transparent text-muted-foreground hover:text-foreground"
               }
               ${isDisabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}
             `}

@@ -9,6 +9,10 @@ import PairwiseEvalsPage from "./components/evals/PairwiseEvalsPage";
 import RunEvalsPage from "./components/evals/RunEvalsPage.tsx";
 import BestOfNEvalsPage from "./components/evals/BestOfNEvalsPage.tsx";
 import AllEvalsPage from "./components/evals/AllEvalsPage.tsx";
+import { initializeTheme } from "./hooks/useTheme";
+
+// Initialize theme before React renders to prevent flash of wrong theme
+initializeTheme();
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
@@ -22,6 +26,6 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
         <Route path="/evals/run" element={<RunEvalsPage />} />
       </Routes>
     </Router>
-    <Toaster toastOptions={{ className: "dark:bg-zinc-950 dark:text-white" }} />
+    <Toaster toastOptions={{ className: "dark:bg-card dark:text-foreground" }} />
   </React.StrictMode>
 );

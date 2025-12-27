@@ -22,6 +22,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "../ui/accordion";
+import { useTheme } from "../../hooks/useTheme";
 
 interface Props {
   settings: Settings;
@@ -29,6 +30,8 @@ interface Props {
 }
 
 function SettingsDialog({ settings, setSettings }: Props) {
+  const { theme, setTheme } = useTheme();
+
   const handleThemeChange = (theme: EditorTheme) => {
     setSettings((s) => ({
       ...s,
@@ -139,22 +142,25 @@ function SettingsDialog({ settings, setSettings }: Props) {
                 <div className="flex items-center justify-between">
                   <Label htmlFor="app-theme">
                     <div>App Theme</div>
+                    <div className="font-light mt-1 text-xs">
+                      System follows your OS preference
+                    </div>
                   </Label>
                   <div>
-                    <button
-                      className="flex rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50t"
-                      onClick={() => {
-                        document
-                          .querySelector("div.mt-2")
-                          ?.classList.toggle("dark"); // enable dark mode for sidebar
-                        document.body.classList.toggle("dark");
-                        document
-                          .querySelector('div[role="presentation"]')
-                          ?.classList.toggle("dark"); // enable dark mode for upload container
-                      }}
+                    <Select
+                      name="app-theme"
+                      value={theme}
+                      onValueChange={(value) => setTheme(value as 'light' | 'dark' | 'system')}
                     >
-                      Toggle dark mode
-                    </button>
+                      <SelectTrigger className="w-[120px]">
+                        {capitalize(theme)}
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="system">System</SelectItem>
+                        <SelectItem value="light">Light</SelectItem>
+                        <SelectItem value="dark">Dark</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
                 <div className="flex items-center justify-between">

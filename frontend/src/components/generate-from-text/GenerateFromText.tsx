@@ -53,7 +53,7 @@ function GenerateFromText({ doCreateFromText }: GenerateFromTextProps) {
             onKeyDown={handleKeyDown}
           />
           <div className="flex justify-between items-center">
-            <span className="text-sm text-gray-500">
+            <span className="text-sm text-muted-foreground">
               Press Cmd/Ctrl + Enter to generate
             </span>
             <div className="flex gap-2">

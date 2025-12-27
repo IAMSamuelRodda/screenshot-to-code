@@ -17,10 +17,7 @@ const baseStyle = {
   padding: "20px",
   borderWidth: 2,
   borderRadius: 2,
-  borderColor: "#eeeeee",
   borderStyle: "dashed",
-  backgroundColor: "#fafafa",
-  color: "#bdbdbd",
   outline: "none",
   transition: "border .24s ease-in-out",
 };
@@ -195,21 +192,21 @@ function ImageUpload({ setReferenceImages }: Props) {
           {...getRootProps({ style: style as any })}
           onDoubleClick={open}
           tabIndex={0}
-          className="cursor-pointer focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+          className="cursor-pointer focus:ring-2 focus:ring-primary focus:ring-offset-2 bg-muted/50 dark:bg-secondary border-border text-muted-foreground"
         >
           <input {...getInputProps()} className="file-input" />
-          <p className="text-slate-700 text-lg">
+          <p className="text-foreground/70 dark:text-foreground/80 text-lg">
             Drag & drop a screenshot here, <br />
             double-click to upload, or paste from clipboard
           </p>
         </div>
       )}
       {screenRecorderState === ScreenRecorderState.INITIAL && (
-        <div className="text-center text-sm text-slate-800 mt-4">
+        <div className="text-center text-sm text-muted-foreground mt-4">
           Upload a screen recording (.mp4, .mov) or record your screen to clone
           a whole app (experimental).{" "}
           <a
-            className="underline"
+            className="underline hover:text-primary"
             href={URLS["intro-to-video"]}
             target="_blank"
           >

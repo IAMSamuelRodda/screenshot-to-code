@@ -43,65 +43,69 @@
     --primary: 222.2 47.4% 11.2%;
     --primary-foreground: 210 40% 98%;
 
-    --secondary: 210 40% 96.1%;
+    --secondary: 210 30% 94%;
     --secondary-foreground: 222.2 47.4% 11.2%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    /* Improved contrast for light mode */
+    --muted: 210 25% 93%;
+    --muted-foreground: 215.4 20% 35%;
 
-    --accent: 210 40% 96.1%;
+    --accent: 210 30% 94%;
     --accent-foreground: 222.2 47.4% 11.2%;
 
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
+    --border: 214.3 25% 85%;
+    --input: 214.3 25% 85%;
     --ring: 222.2 84% 4.9%;
 
     --radius: 0.5rem;
   }
   
   body.dark {
-    background-color: black;
+    background-color: #0a0e14;
   }
 
   div[role="presentation"].dark {
-    background-color: #09090b !important;
+    background-color: #0f1419 !important;
   }
 
   iframe {
-    background-color: white !important; 
+    background-color: white !important;
   }
 
+  /* Arc theme dark mode - cohesive dark blue-gray palette */
   .dark {
-    --background: 222.2 0% 0%;
-    --foreground: 210 40% 98%;
+    /* Backgrounds: #0a0e14 -> #0f1419 -> #1a1f29 */
+    --background: 213 33% 6%;        /* #0a0e14 - primary bg */
+    --foreground: 210 14% 83%;       /* #c9d1d9 - primary text */
 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
+    --card: 212 26% 8%;              /* #0f1419 - secondary bg */
+    --card-foreground: 210 14% 83%;
 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+    --popover: 213 20% 10%;          /* #141a21 */
+    --popover-foreground: 210 14% 83%;
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    /* Primary action uses arc accent green */
+    --primary: 137 28% 61%;          /* #7eb88e - arc accent */
+    --primary-foreground: 213 33% 6%;
 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 213 18% 13%;        /* #1a1f29 - tertiary bg */
+    --secondary-foreground: 210 14% 83%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 213 18% 13%;            /* #1a1f29 */
+    --muted-foreground: 212 10% 58%; /* #8b949e - secondary text */
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 213 18% 13%;
+    --accent-foreground: 210 14% 83%;
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 45%;
+    --destructive-foreground: 210 14% 93%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
+    --border: 213 14% 21%;           /* #2d333d */
+    --input: 213 17% 16%;            /* #1e2329 - subtle border */
+    --ring: 137 28% 61%;             /* #7eb88e - arc accent */
   }
 }
 

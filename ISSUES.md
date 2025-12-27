@@ -1,8 +1,88 @@
 # Issues & Spike Tasks
 
 **Blueprint**: `BLUEPRINT-rework-claude-code-integration-20251212.yaml`
-**Last Updated**: 2025-12-13
+**Last Updated**: 2025-12-28
 **Purpose**: Track spike tasks, high-uncertainty items, and blocking issues for Claude Code SDK integration
+
+---
+
+## Live Editor v1 - Known Issues & Next Steps
+
+**Feature**: Live Editor panel for in-place Claude-assisted code editing
+**Status**: Working with known issues
+
+### Known Issues
+
+#### ISSUE-LE-001: Chat Textarea Unresponsive After Hard Refresh
+**Status**: 🟡 Open (manual workaround available)
+**Severity**: Medium - affects UX on page reload
+
+**Symptoms**:
+- After hard refresh (Ctrl+Shift+R), the chat textarea is unclickable/unresponsive
+- Issue does NOT occur on soft refresh or after tab switching
+
+**Manual Workaround**:
+1. Click "Elements" or "Settings" tab
+2. Click back to "Chat" tab
+3. Textarea becomes responsive
+
+**Root Cause Hypothesis**:
+- Conflict with iframe's embedded Pip chat interface on initial page load
+- Radix UI Tabs initialization timing issue
+- Auto tab-switching workaround (programmatic) does not work reliably
+
+**Investigation Attempts**:
+- ❌ useLayoutEffect with reflow forcing
+- ❌ forceMount on TabsContent
+- ❌ Controlled tabs with auto tab-switching (500ms→600ms delays)
+- ❌ Moving ChatInput outside Tabs component
+- ❌ CSS isolation (z-index, pointer-events, isolate)
+- ❌ tabIndex={-1} on iframe
+
+**Next Steps**:
+- Investigate iframe focus/pointer-events interaction on load
+- Consider lazy-loading iframe after chat initialization
+- Test with non-Pip target app (isolate iframe content as cause)
+
+---
+
+### Completed Fixes
+
+#### FIX-LE-001: Session ID "Invalid UUID" Error
+**Status**: ✅ Fixed (2025-12-28)
+**Solution**: Changed from `pf-{hash}` format to UUID v5 generation
+
+#### FIX-LE-002: Session ID "Already in Use" Error
+**Status**: ✅ Fixed (2025-12-28)
+**Solution**: Include server start timestamp in session ID generation - IDs now unique per server run
+
+#### FIX-LE-003: Message Formatting (No Line Breaks)
+**Status**: ✅ Fixed (2025-12-28)
+**Solution**: Added `whitespace-pre-wrap` to prose containers in ChatMessages.tsx
+
+#### FIX-LE-004: Iframe Refresh Not Showing Changes
+**Status**: ✅ Fixed (2025-12-28)
+**Solution**: Changed from location.reload() to cache-busting with timestamp query param
+
+---
+
+### Next Steps for Live Editor v2
+
+1. **Fix textarea responsiveness** - Priority P1
+   - Root cause analysis needed
+   - May require architectural changes to iframe/tabs interaction
+
+2. **Tool activity visualization** - Priority P2
+   - ToolCard component exists but needs styling/polish
+   - Show file edits, searches, etc. in chat stream
+
+3. **Multi-element selection** - Priority P2
+   - Currently supports single element selection
+   - Blueprint calls for persistent selection with multi-select
+
+4. **Pip app integration testing** - Blocked
+   - Requires local dev OpenBao API keys for Pip
+   - See Pip issue_062
 
 ---
 

@@ -390,7 +390,7 @@ function App() {
   }
 
   return (
-    <div className="mt-2 dark:bg-black dark:text-white">
+    <div className="dark:bg-background dark:text-foreground">
       {IS_RUNNING_ON_CLOUD && <PicoBadge />}
       {IS_RUNNING_ON_CLOUD && (
         <TermsOfServiceDialog
@@ -406,7 +406,7 @@ function App() {
       />
 
       <div className="lg:fixed lg:inset-y-0 lg:z-40 lg:flex lg:w-96 lg:flex-col">
-        <div className="flex grow flex-col gap-y-2 overflow-y-auto border-r border-gray-200 bg-white px-6 dark:bg-zinc-950 dark:text-white">
+        <div className="flex grow flex-col gap-y-2 overflow-y-auto border-r border-border bg-white px-6 dark:bg-card dark:text-foreground">
           {/* Header with access to settings */}
           <div className="flex items-center justify-between mt-10 mb-2">
             <h1 className="text-2xl ">Screenshot to Code</h1>
@@ -452,12 +452,12 @@ function App() {
         </div>
       </div>
 
-      <main className="lg:pl-96 flex flex-col h-screen">
+      <main className="lg:pl-96 flex flex-col h-screen overflow-hidden">
         {/* Mode Tab Bar */}
         <ModeTabBar />
 
         {/* Both panes rendered, visibility toggled to preserve state */}
-        <div className={`flex-1 ${activeMode === "screenshot-to-code" ? "" : "hidden"}`}>
+        <div className={`flex-1 min-h-0 overflow-auto ${activeMode === "screenshot-to-code" ? "" : "hidden"}`}>
           <div className="py-2">
             {appState === AppState.INITIAL && (
               <StartPane
@@ -472,7 +472,7 @@ function App() {
           </div>
         </div>
 
-        <div className={`flex-1 ${activeMode === "live-editor" ? "" : "hidden"}`}>
+        <div className={`flex-1 min-h-0 overflow-hidden ${activeMode === "live-editor" ? "" : "hidden"}`}>
           <LiveEditorPane />
         </div>
       </main>
