@@ -41,6 +41,9 @@ export interface CodeGenerationParams {
   prompt: PromptContent;
   history?: PromptContent[];
   isImportedFromCode?: boolean;
+  // Session persistence for unified Claude session
+  session_id?: string;
+  project_path?: string;
 }
 
 export type FullGenerationSettings = CodeGenerationParams & Settings;

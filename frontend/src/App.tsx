@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { generateCode } from "./generateCode";
 import SettingsDialog from "./components/settings/SettingsDialog";
 import { AppState, CodeGenerationParams, EditorTheme, Settings } from "./types";
@@ -16,6 +16,7 @@ import useBrowserTabIndicator from "./hooks/useBrowserTabIndicator";
 // import TipLink from "./components/messages/TipLink";
 import { useAppStore } from "./store/app-store";
 import { useProjectStore } from "./store/project-store";
+import { useSessionStore } from "./store/session-store";
 import Sidebar from "./components/sidebar/Sidebar";
 import PreviewPane from "./components/preview/PreviewPane";
 import { GenerationSettings } from "./components/settings/GenerationSettings";
@@ -23,6 +24,9 @@ import StartPane from "./components/start-pane/StartPane";
 import { Commit } from "./components/commits/types";
 import { createCommit } from "./components/commits/utils";
 import GenerateFromText from "./components/generate-from-text/GenerateFromText";
+import ProjectSelector from "./components/project-selector/ProjectSelector";
+import ModeTabBar from "./components/layout/ModeTabBar";
+import LiveEditorPane from "./components/live-editor/LiveEditorPane";
 
 function App() {
   const {
@@ -61,6 +65,19 @@ function App() {
     appState,
     setAppState,
   } = useAppStore();
+
+  const { sessionId, projectPath, projectName, activeMode, setSessionId } = useSessionStore();
+
+  // Project selector state - show on first load if no project is set
+  const [showProjectSelector, setShowProjectSelector] = useState(false);
+
+  // Show project selector on first render if no project is configured
+  useEffect(() => {
+    // Only show on initial load in INITIAL state with no project
+    if (appState === AppState.INITIAL && !projectPath) {
+      setShowProjectSelector(true);
+    }
+  }, []);
 
   // Settings
   const [settings, setSettings] = usePersistedState<Settings>(
@@ -173,8 +190,13 @@ function App() {
     // Set the app state to coding during generation
     setAppState(AppState.CODING);
 
-    // Merge settings with params
-    const updatedParams = { ...params, ...settings };
+    // Merge settings with params, including session info
+    const updatedParams = {
+      ...params,
+      ...settings,
+      session_id: sessionId || undefined,
+      project_path: projectPath || undefined,
+    };
 
     // Create variants dynamically - start with 4 to handle most cases
     // Backend will use however many it needs (typically 3)
@@ -226,6 +248,10 @@ function App() {
       onVariantCount: (count) => {
         console.log(`Backend is using ${count} variants`);
         resizeVariants(commit.hash, count);
+      },
+      onSessionUpdate: (newSessionId) => {
+        console.log(`Session ID updated: ${newSessionId}`);
+        setSessionId(newSessionId);
       },
       onCancel: () => {
         cancelCodeGenerationAndReset(commit);
@@ -372,6 +398,13 @@ function App() {
           onOpenChange={handleTermDialogOpenChange}
         />
       )}
+
+      {/* Project Selector Modal */}
+      <ProjectSelector
+        open={showProjectSelector}
+        onOpenChange={setShowProjectSelector}
+      />
+
       <div className="lg:fixed lg:inset-y-0 lg:z-40 lg:flex lg:w-96 lg:flex-col">
         <div className="flex grow flex-col gap-y-2 overflow-y-auto border-r border-gray-200 bg-white px-6 dark:bg-zinc-950 dark:text-white">
           {/* Header with access to settings */}
@@ -379,6 +412,20 @@ function App() {
             <h1 className="text-2xl ">Screenshot to Code</h1>
             <SettingsDialog settings={settings} setSettings={setSettings} />
           </div>
+
+          {/* Project indicator */}
+          <button
+            onClick={() => setShowProjectSelector(true)}
+            className="flex items-center gap-2 px-3 py-2 text-sm rounded-md border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+          >
+            <span className="text-muted-foreground">Project:</span>
+            <span className="font-medium truncate">
+              {projectName || "None selected"}
+            </span>
+            {sessionId && (
+              <span className="w-2 h-2 rounded-full bg-green-500" title="Session active" />
+            )}
+          </button>
 
           {/* Generation settings like stack and model */}
           <GenerationSettings settings={settings} setSettings={setSettings} />
@@ -405,17 +452,29 @@ function App() {
         </div>
       </div>
 
-      <main className="py-2 lg:pl-96">
-        {appState === AppState.INITIAL && (
-          <StartPane
-            doCreate={doCreate}
-            importFromCode={importFromCode}
-          />
-        )}
+      <main className="lg:pl-96 flex flex-col h-screen">
+        {/* Mode Tab Bar */}
+        <ModeTabBar />
 
-        {(appState === AppState.CODING || appState === AppState.CODE_READY) && (
-          <PreviewPane doUpdate={doUpdate} reset={reset} settings={settings} />
-        )}
+        {/* Both panes rendered, visibility toggled to preserve state */}
+        <div className={`flex-1 ${activeMode === "screenshot-to-code" ? "" : "hidden"}`}>
+          <div className="py-2">
+            {appState === AppState.INITIAL && (
+              <StartPane
+                doCreate={doCreate}
+                importFromCode={importFromCode}
+              />
+            )}
+
+            {(appState === AppState.CODING || appState === AppState.CODE_READY) && (
+              <PreviewPane doUpdate={doUpdate} reset={reset} settings={settings} />
+            )}
+          </div>
+        </div>
+
+        <div className={`flex-1 ${activeMode === "live-editor" ? "" : "hidden"}`}>
+          <LiveEditorPane />
+        </div>
       </main>
     </div>
   );

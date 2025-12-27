@@ -22,6 +22,7 @@ type WebSocketResponse = {
     | "variantCount";
   value: string;
   variantIndex: number;
+  session_id?: string; // Returned by backend for session persistence
 };
 
 interface CodeGenerationCallbacks {
@@ -31,6 +32,7 @@ interface CodeGenerationCallbacks {
   onVariantComplete: (variantIndex: number) => void;
   onVariantError: (variantIndex: number, error: string) => void;
   onVariantCount: (count: number) => void;
+  onSessionUpdate?: (sessionId: string) => void;
   onCancel: () => void;
   onComplete: () => void;
 }
@@ -60,6 +62,10 @@ export function generateCode(
       callbacks.onSetCode(response.value, response.variantIndex);
     } else if (response.type === "variantComplete") {
       callbacks.onVariantComplete(response.variantIndex);
+      // Update session ID if backend returns one
+      if (response.session_id && callbacks.onSessionUpdate) {
+        callbacks.onSessionUpdate(response.session_id);
+      }
     } else if (response.type === "variantError") {
       callbacks.onVariantError(response.variantIndex, response.value);
     } else if (response.type === "variantCount") {
