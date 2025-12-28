@@ -66,7 +66,7 @@ function App() {
     setAppState,
   } = useAppStore();
 
-  const { sessionId, projectPath, projectName, activeMode, setSessionId } = useSessionStore();
+  const { sessionId, projectPath, projectName, activeMode, setSessionId, switchMode } = useSessionStore();
 
   // Project selector state - show on first load if no project is set
   const [showProjectSelector, setShowProjectSelector] = useState(false);
@@ -258,6 +258,39 @@ function App() {
       },
       onComplete: () => {
         setAppState(AppState.CODE_READY);
+        // Offer to continue in Live Editor if project is configured
+        if (projectPath) {
+          toast.custom(
+            (t) => (
+              <div
+                className={`${
+                  t.visible ? 'animate-enter' : 'animate-leave'
+                } max-w-md w-full bg-white dark:bg-gray-800 shadow-lg rounded-lg pointer-events-auto flex ring-1 ring-black ring-opacity-5`}
+              >
+                <div className="flex-1 w-0 p-4">
+                  <p className="text-sm font-medium text-gray-900 dark:text-white">
+                    Generation complete!
+                  </p>
+                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                    Continue editing with visual selection in Live Editor.
+                  </p>
+                </div>
+                <div className="flex border-l border-gray-200 dark:border-gray-700">
+                  <button
+                    onClick={() => {
+                      switchMode("live-editor");
+                      toast.dismiss(t.id);
+                    }}
+                    className="w-full border border-transparent rounded-none rounded-r-lg p-4 flex items-center justify-center text-sm font-medium text-primary hover:text-primary/80 focus:outline-none"
+                  >
+                    Open Live Editor
+                  </button>
+                </div>
+              </div>
+            ),
+            { duration: 6000 }
+          );
+        }
       },
     });
   }
@@ -405,7 +438,8 @@ function App() {
         onOpenChange={setShowProjectSelector}
       />
 
-      <div className="lg:fixed lg:inset-y-0 lg:z-40 lg:flex lg:w-96 lg:flex-col">
+      {/* Sidebar - only visible in Screenshot-to-Code mode */}
+      <div className={`lg:fixed lg:inset-y-0 lg:z-40 lg:flex lg:w-96 lg:flex-col ${activeMode === "live-editor" ? "hidden" : ""}`}>
         <div className="flex grow flex-col gap-y-2 overflow-y-auto border-r border-border bg-white px-6 dark:bg-card dark:text-foreground">
           {/* Header with access to settings */}
           <div className="flex items-center justify-between mt-10 mb-2">
@@ -452,7 +486,8 @@ function App() {
         </div>
       </div>
 
-      <main className="lg:pl-96 flex flex-col h-screen overflow-hidden">
+      {/* Main content - full width in Live Editor, with sidebar offset in Screenshot-to-Code */}
+      <main className={`flex flex-col h-screen overflow-hidden ${activeMode === "live-editor" ? "" : "lg:pl-96"}`}>
         {/* Mode Tab Bar */}
         <ModeTabBar />
 

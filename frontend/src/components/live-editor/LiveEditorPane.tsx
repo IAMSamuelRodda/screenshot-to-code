@@ -35,7 +35,7 @@ import { SelectedElementsList } from './SelectedElementsList'
 import { useLiveEditorStore } from './store/chat-store'
 
 export function LiveEditorPane() {
-  const { projectPath, devServerUrl } = useSessionStore()
+  const { projectPath, devServerUrl, lastSavedFile } = useSessionStore()
 
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const [selectMode, setSelectMode] = useState(false)
@@ -45,6 +45,8 @@ export function LiveEditorPane() {
   const [activeTab, setActiveTab] = useState('chat')
 
   // Get store actions and state
+  // Note: sessionId and projectPath are now read from session-store directly
+  // by chat-store, so no sync needed here
   const {
     connect,
     disconnect,
@@ -53,7 +55,6 @@ export function LiveEditorPane() {
     removeElement,
     clearElements,
     selectedElements,
-    setProjectPath,
   } = useLiveEditorStore()
 
   // Initialize connection on mount
@@ -76,12 +77,7 @@ export function LiveEditorPane() {
     }
   }, [])
 
-  // Sync project path to store
-  useEffect(() => {
-    if (projectPath) {
-      setProjectPath(projectPath)
-    }
-  }, [projectPath, setProjectPath])
+  // Note: Project path sync removed - chat-store now reads from session-store directly
 
   // Load the dev server URL into the proxy
   const loadApp = useCallback(async () => {
@@ -309,6 +305,45 @@ export function LiveEditorPane() {
                     {connected ? '✓ Connected' : '✗ Disconnected'}
                   </p>
                 </div>
+
+                {/* Last Saved File Info */}
+                {lastSavedFile && (
+                  <div className="pt-4 border-t">
+                    <label className="text-sm font-medium">Last Generated Code</label>
+                    <div className="mt-2 space-y-1">
+                      <p className="text-sm text-muted-foreground">
+                        <span className="font-medium">File:</span>{' '}
+                        <code className="bg-muted px-1 py-0.5 rounded text-xs">
+                          {lastSavedFile.relPath}
+                        </code>
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        <span className="font-medium">URL:</span>{' '}
+                        <code className="bg-muted px-1 py-0.5 rounded text-xs">
+                          {lastSavedFile.urlPath}
+                        </code>
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        <span className="font-medium">Saved:</span>{' '}
+                        {new Date(lastSavedFile.timestamp).toLocaleString()}
+                      </p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mt-2"
+                      onClick={() => {
+                        if (iframeRef.current) {
+                          iframeRef.current.src = `${HTTP_BACKEND_URL}/app${lastSavedFile.urlPath}`
+                          toast.success('Navigated to saved file')
+                        }
+                      }}
+                    >
+                      View Saved File
+                    </Button>
+                  </div>
+                )}
+
                 <Button
                   variant="outline"
                   size="sm"

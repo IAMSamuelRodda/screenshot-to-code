@@ -2,7 +2,10 @@ import { useSessionStore, ActiveMode } from "@/store/session-store";
 import { FaCamera, FaEdit } from "react-icons/fa";
 
 export function ModeTabBar() {
-  const { activeMode, switchMode, projectPath } = useSessionStore();
+  const { activeMode, switchMode, projectPath, sessionId } = useSessionStore();
+
+  // Show session indicator when switching modes will continue a session
+  const hasActiveSession = !!sessionId;
 
   const tabs: { mode: ActiveMode; label: string; icon: React.ReactNode }[] = [
     {
@@ -23,6 +26,9 @@ export function ModeTabBar() {
         const isActive = activeMode === tab.mode;
         const isDisabled = tab.mode === "live-editor" && !projectPath;
 
+        // Show "continues session" indicator on inactive tab when session exists
+        const showSessionIndicator = !isActive && hasActiveSession && !isDisabled;
+
         return (
           <button
             key={tab.mode}
@@ -40,11 +46,16 @@ export function ModeTabBar() {
             title={
               isDisabled
                 ? "Select a project to enable Live Editor"
+                : showSessionIndicator
+                ? `${tab.label} (continues session)`
                 : tab.label
             }
           >
             {tab.icon}
             {tab.label}
+            {showSessionIndicator && (
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500" title="Session continues" />
+            )}
           </button>
         );
       })}

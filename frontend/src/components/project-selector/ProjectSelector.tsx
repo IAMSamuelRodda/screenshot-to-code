@@ -18,9 +18,10 @@ interface ProjectSelectorProps {
 }
 
 export function ProjectSelector({ open, onOpenChange }: ProjectSelectorProps) {
-  const { recentProjects, setProject, clearProject } = useSessionStore();
+  const { recentProjects, setProject, clearProject, setSavePath, savePath: storedSavePath } = useSessionStore();
   const [projectPath, setProjectPath] = useState("");
   const [devServerUrl, setDevServerUrl] = useState("");
+  const [savePath, setSavePathLocal] = useState(storedSavePath || "");
 
   const handleSelectProject = (path: string, devUrl?: string) => {
     setProject(path, devUrl);
@@ -29,6 +30,10 @@ export function ProjectSelector({ open, onOpenChange }: ProjectSelectorProps) {
 
   const handleSubmit = () => {
     if (projectPath.trim()) {
+      // Save the save path preference
+      if (savePath.trim()) {
+        setSavePath(savePath.trim());
+      }
       handleSelectProject(projectPath.trim(), devServerUrl.trim() || undefined);
     }
   };
@@ -120,6 +125,24 @@ export function ProjectSelector({ open, onOpenChange }: ProjectSelectorProps) {
             />
             <p className="text-xs text-muted-foreground">
               For Live Editor mode - the URL of your running dev server
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="save-path">
+              Generated Code Location{" "}
+              <span className="text-muted-foreground">(optional)</span>
+            </Label>
+            <Input
+              id="save-path"
+              placeholder="forge/index.html"
+              value={savePath}
+              onChange={(e) => setSavePathLocal(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
+            />
+            <p className="text-xs text-muted-foreground">
+              Where to save generated code. Defaults to forge/ folder with
+              appropriate extension based on stack.
             </p>
           </div>
         </div>

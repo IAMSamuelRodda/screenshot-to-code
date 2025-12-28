@@ -1,5 +1,9 @@
 .aider*
 
+# Dependencies
+node_modules/
+package-lock.json
+
 # Project-related files
 
 # Run logs

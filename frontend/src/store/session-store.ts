@@ -10,6 +10,13 @@ interface RecentProject {
   lastOpened: string; // ISO date string
 }
 
+export interface LastSavedFile {
+  filePath: string;   // Full path: /home/user/project/forge/index.html
+  relPath: string;    // Relative path: forge/index.html
+  urlPath: string;    // URL path: /forge/index.html
+  timestamp: string;  // ISO date string
+}
+
 interface SessionStore {
   // Current project
   projectPath: string | null;
@@ -23,12 +30,18 @@ interface SessionStore {
   // Persisted recent projects
   recentProjects: RecentProject[];
 
+  // Save configuration
+  savePath: string | null;        // Default save path (e.g., "forge/index.html")
+  lastSavedFile: LastSavedFile | null;
+
   // Actions
   setProject: (path: string, devServerUrl?: string) => void;
   setSessionId: (sessionId: string) => void;
   switchMode: (mode: ActiveMode) => void;
   newSession: () => void;
   clearProject: () => void;
+  setSavePath: (path: string) => void;
+  setLastSavedFile: (filePath: string, relPath: string, urlPath: string) => void;
 }
 
 // Helper to extract project name from path
@@ -51,6 +64,10 @@ export const useSessionStore = create<SessionStore>()(
 
       // Recent projects (persisted)
       recentProjects: [],
+
+      // Save configuration
+      savePath: null,
+      lastSavedFile: null,
 
       // Actions
       setProject: (path: string, devServerUrl?: string) => {
@@ -96,14 +113,35 @@ export const useSessionStore = create<SessionStore>()(
           projectName: null,
           devServerUrl: null,
           sessionId: null,
+          lastSavedFile: null,
+        });
+      },
+
+      setSavePath: (path: string) => {
+        set({ savePath: path });
+      },
+
+      setLastSavedFile: (filePath: string, relPath: string, urlPath: string) => {
+        set({
+          lastSavedFile: {
+            filePath,
+            relPath,
+            urlPath,
+            timestamp: new Date().toISOString(),
+          },
         });
       },
     }),
     {
       name: "pixel-forge-session",
-      // Only persist recentProjects to localStorage
+      // Persist session state for continuity across page reloads and mode switches
       partialize: (state) => ({
         recentProjects: state.recentProjects,
+        sessionId: state.sessionId,
+        projectPath: state.projectPath,
+        projectName: state.projectName,
+        devServerUrl: state.devServerUrl,
+        savePath: state.savePath,
       }),
     }
   )

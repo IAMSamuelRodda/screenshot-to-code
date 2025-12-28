@@ -4,10 +4,15 @@
  * Manages chat state, streaming responses, tool visualization,
  * and element selection for the Live Editor.
  *
+ * Session Management: Uses session-store as single source of truth for
+ * sessionId and projectPath. This enables unified sessions across
+ * Screenshot-to-Code and Live Editor modes.
+ *
  * Pattern: Adapted from aim-up/dashboard/frontend/src/store/chat-store.ts
  */
 
 import { create } from 'zustand'
+import { useSessionStore } from '../../../store/session-store'
 
 // ============================================================================
 // Types
@@ -44,7 +49,6 @@ export interface SelectedElement {
 interface LiveEditorChatStore {
   // Chat state
   messages: ChatMessage[]
-  sessionId: string | null
   isStreaming: boolean
   currentStreamContent: string
   currentTool: ToolActivity | null
@@ -57,8 +61,8 @@ interface LiveEditorChatStore {
   selectedElements: SelectedElement[]
   maxSelectedElements: number
 
-  // Project context
-  projectPath: string
+  // NOTE: sessionId and projectPath are now read from session-store
+  // This enables unified sessions across Screenshot-to-Code and Live Editor
 
   // Actions - Chat
   connect: (endpoint?: string) => void
@@ -71,10 +75,13 @@ interface LiveEditorChatStore {
   addElement: (element: Omit<SelectedElement, 'id' | 'timestamp'>) => void
   removeElement: (id: string) => void
   clearElements: () => void
-  setProjectPath: (path: string) => void
 
   // Helpers
   buildElementContext: () => string
+
+  // Getters for session state (reads from session-store)
+  getSessionId: () => string | null
+  getProjectPath: () => string | null
 }
 
 // ============================================================================
@@ -91,33 +98,8 @@ function isValidUUID(str: string | null): boolean {
   return uuidRegex.test(str)
 }
 
-function getStoredSessionId(): string | null {
-  const stored = localStorage.getItem('pixel-forge-live-editor-session')
-  // Clear invalid session IDs (must be valid UUID)
-  if (stored && !isValidUUID(stored)) {
-    console.log('[live-editor] Clearing invalid session ID:', stored)
-    localStorage.removeItem('pixel-forge-live-editor-session')
-    return null
-  }
-  return stored
-}
-
-function storeSessionId(id: string): void {
-  // Only store valid UUIDs
-  if (isValidUUID(id)) {
-    localStorage.setItem('pixel-forge-live-editor-session', id)
-  } else {
-    console.warn('[live-editor] Refusing to store invalid session ID:', id)
-  }
-}
-
-function getStoredProjectPath(): string {
-  return localStorage.getItem('pixel-forge-project-path') || ''
-}
-
-function storeProjectPath(path: string): void {
-  localStorage.setItem('pixel-forge-project-path', path)
-}
+// Session state is now managed by session-store for unified mode support
+// Use useSessionStore.getState() to read synchronously
 
 // ============================================================================
 // Store
@@ -126,7 +108,6 @@ function storeProjectPath(path: string): void {
 export const useLiveEditorStore = create<LiveEditorChatStore>((set, get) => ({
   // Initial state
   messages: [],
-  sessionId: getStoredSessionId(),
   isStreaming: false,
   currentStreamContent: '',
   currentTool: null,
@@ -134,7 +115,10 @@ export const useLiveEditorStore = create<LiveEditorChatStore>((set, get) => ({
   connected: false,
   selectedElements: [],
   maxSelectedElements: 10,
-  projectPath: getStoredProjectPath(),
+
+  // Getters - read from session-store for unified session management
+  getSessionId: () => useSessionStore.getState().sessionId,
+  getProjectPath: () => useSessionStore.getState().projectPath,
 
   // -------------------------------------------------------------------------
   // Connection Management
@@ -227,10 +211,10 @@ export const useLiveEditorStore = create<LiveEditorChatStore>((set, get) => ({
           } else {
             set({ isStreaming: false })
           }
-          // Store session ID if returned
-          if (data.session_id) {
-            storeSessionId(data.session_id)
-            set({ sessionId: data.session_id })
+          // Update session-store with returned session ID (unified session management)
+          if (data.session_id && isValidUUID(data.session_id)) {
+            useSessionStore.getState().setSessionId(data.session_id)
+            console.log('[live-editor] Session ID synced to session-store:', data.session_id)
           }
           break
 
@@ -280,7 +264,11 @@ export const useLiveEditorStore = create<LiveEditorChatStore>((set, get) => ({
   // -------------------------------------------------------------------------
 
   sendMessage: (content: string) => {
-    const { ws, sessionId, messages, projectPath, buildElementContext } = get()
+    const { ws, messages, buildElementContext, getSessionId, getProjectPath } = get()
+
+    // Read from session-store (unified session management)
+    const sessionId = getSessionId()
+    const projectPath = getProjectPath()
 
     if (!ws || ws.readyState !== WebSocket.OPEN) {
       get().connect()
@@ -295,7 +283,7 @@ export const useLiveEditorStore = create<LiveEditorChatStore>((set, get) => ({
           {
             id: generateId(),
             role: 'assistant',
-            content: 'Error: No project path configured. Please set a project path first.',
+            content: 'Error: No project path configured. Please select a project first.',
             timestamp: new Date(),
           },
         ],
@@ -328,7 +316,7 @@ export const useLiveEditorStore = create<LiveEditorChatStore>((set, get) => ({
       element_context: elementContext,
     }
 
-    // Only include session_id if it's valid
+    // Only include session_id if it's valid (enables session continuity across modes)
     if (sessionId && isValidUUID(sessionId)) {
       payload.session_id = sessionId
     }
@@ -341,9 +329,9 @@ export const useLiveEditorStore = create<LiveEditorChatStore>((set, get) => ({
   },
 
   newSession: () => {
-    localStorage.removeItem('pixel-forge-live-editor-session')
+    // Clear session in session-store (unified session management)
+    useSessionStore.getState().newSession()
     set({
-      sessionId: null,
       messages: [],
       currentStreamContent: '',
       selectedElements: [],
@@ -388,10 +376,7 @@ export const useLiveEditorStore = create<LiveEditorChatStore>((set, get) => ({
     set({ selectedElements: [] })
   },
 
-  setProjectPath: (path: string) => {
-    storeProjectPath(path)
-    set({ projectPath: path })
-  },
+  // Note: setProjectPath removed - use useSessionStore.setProject() instead
 
   // -------------------------------------------------------------------------
   // Context Building
