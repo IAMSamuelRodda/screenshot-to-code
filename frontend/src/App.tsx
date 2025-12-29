@@ -439,7 +439,8 @@ function App() {
       />
 
       {/* Sidebar - only visible in Screenshot-to-Code mode */}
-      <div className={`lg:fixed lg:inset-y-0 lg:z-40 lg:flex lg:w-96 lg:flex-col ${activeMode === "live-editor" ? "hidden" : ""}`}>
+      {activeMode !== "live-editor" && (
+      <div className="lg:fixed lg:inset-y-0 lg:z-40 lg:flex lg:w-96 lg:flex-col">
         <div className="flex grow flex-col gap-y-2 overflow-y-auto border-r border-border bg-white px-6 dark:bg-card dark:text-foreground">
           {/* Header with access to settings */}
           <div className="flex items-center justify-between mt-10 mb-2">
@@ -485,6 +486,7 @@ function App() {
           )}
         </div>
       </div>
+      )}
 
       {/* Main content - full width in Live Editor, with sidebar offset in Screenshot-to-Code */}
       <main className={`flex flex-col h-screen overflow-hidden ${activeMode === "live-editor" ? "" : "lg:pl-96"}`}>

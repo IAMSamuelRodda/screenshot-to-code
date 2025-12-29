@@ -31,6 +31,55 @@ Iframe was capturing focus on page load before the textarea could receive it. Th
 
 ---
 
+#### ISSUE-LE-002: Left Sidebar Wastes Space in Live Editor Mode
+**Status**: ✅ Fixed (2025-12-29)
+**Severity**: Medium - affects UX/usability
+**Reported**: 2025-12-29
+
+**Symptoms**:
+- In Live Editor mode, the left sidebar (~300px) shows content irrelevant to live editing:
+  - "Generating: HTML + Tailwind" dropdown (not used in Live Editor)
+  - "Generate from text prompt [BETA]" button (not used in Live Editor)
+  - Only the Project selector is actually useful
+
+**Impact**:
+- Reduces iframe viewport width significantly
+- 3-column layout (sidebar + iframe + chat panel) leaves limited space for target app
+
+**Solution**:
+Changed from Tailwind class toggling (`hidden` was being overridden by `lg:flex`) to conditional JSX rendering in App.tsx:
+```tsx
+{activeMode !== "live-editor" && (
+  <div className="lg:fixed lg:inset-y-0 lg:z-40 lg:flex lg:w-96 lg:flex-col">
+    ...sidebar content...
+  </div>
+)}
+```
+The sidebar now only renders in Screenshot-to-Code mode, giving Live Editor full viewport width.
+
+---
+
+#### ISSUE-LE-003: Multi-Select Ctrl+Click May Pass Through to Iframe
+**Status**: 🟡 Needs Investigation
+**Severity**: Low - workaround available
+**Reported**: 2025-12-29
+
+**Symptoms**:
+- When trying to Ctrl+Click to add additional elements to selection
+- Click sometimes triggers iframe's actual functionality instead of adding to selection
+- Example: Ctrl+Click on "Invoices" button opened the Invoices dropdown in Pip app
+
+**Workaround**:
+- Click elements individually, selection persists between clicks
+
+**Investigation Needed**:
+- Check if selection overlay properly intercepts Ctrl+Click events
+- May need to preventDefault on modifier key clicks in iframe overlay
+
+**Priority**: P3 - minor issue
+
+---
+
 ### Completed Fixes
 
 #### FIX-LE-001: Session ID "Invalid UUID" Error
@@ -56,17 +105,23 @@ Iframe was capturing focus on page load before the textarea could receive it. Th
 1. ~~**Fix textarea responsiveness** - Priority P1~~ ✅ Fixed (2025-12-29)
    - Resolved with focus-on-mount and click handler in ChatInput.tsx
 
-2. **Tool activity visualization** - Priority P2
+2. ~~**Left sidebar UX rework** - Priority P2~~ ✅ Fixed (2025-12-29) (ISSUE-LE-002)
+   - Sidebar now hidden in Live Editor mode via conditional JSX rendering
+   - Iframe gets full viewport width
+
+3. **Tool activity visualization** - Priority P2
    - ToolCard component exists but needs styling/polish
    - Show file edits, searches, etc. in chat stream
 
-3. ~~**Multi-element selection** - Priority P2~~ ✅ Working (2025-12-29)
+4. ~~**Multi-element selection** - Priority P2~~ ✅ Working (2025-12-29)
    - Multi-select with Ctrl+Click implemented and tested
    - Element count indicator shows in chat input
+   - Note: Ctrl+Click may pass through to iframe (ISSUE-LE-003)
 
-4. **Pip app integration testing** - Blocked
-   - Requires local dev OpenBao API keys for Pip
-   - See Pip issue_062
+5. ~~**Pip app integration testing**~~ ✅ Working (2025-12-29)
+   - Native modules rebuilt for Node v24
+   - PWA frontend on port 3001, API on port 3000
+   - Element selection + chat modification verified working
 
 ---
 
