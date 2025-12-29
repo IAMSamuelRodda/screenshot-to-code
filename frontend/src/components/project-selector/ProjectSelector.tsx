@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -18,10 +18,27 @@ interface ProjectSelectorProps {
 }
 
 export function ProjectSelector({ open, onOpenChange }: ProjectSelectorProps) {
-  const { recentProjects, setProject, clearProject, setSavePath, savePath: storedSavePath } = useSessionStore();
-  const [projectPath, setProjectPath] = useState("");
-  const [devServerUrl, setDevServerUrl] = useState("");
+  const {
+    recentProjects,
+    setProject,
+    clearProject,
+    setSavePath,
+    savePath: storedSavePath,
+    projectPath: storedProjectPath,
+    devServerUrl: storedDevServerUrl,
+  } = useSessionStore();
+  const [projectPath, setProjectPath] = useState(storedProjectPath || "");
+  const [devServerUrl, setDevServerUrl] = useState(storedDevServerUrl || "");
   const [savePath, setSavePathLocal] = useState(storedSavePath || "");
+
+  // Sync local state when dialog opens and store has values
+  useEffect(() => {
+    if (open) {
+      if (storedProjectPath) setProjectPath(storedProjectPath);
+      if (storedDevServerUrl) setDevServerUrl(storedDevServerUrl);
+      if (storedSavePath) setSavePathLocal(storedSavePath);
+    }
+  }, [open, storedProjectPath, storedDevServerUrl, storedSavePath]);
 
   const handleSelectProject = (path: string, devUrl?: string) => {
     setProject(path, devUrl);

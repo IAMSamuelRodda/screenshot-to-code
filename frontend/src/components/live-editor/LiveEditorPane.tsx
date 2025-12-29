@@ -80,14 +80,15 @@ export function LiveEditorPane() {
   // Note: Project path sync removed - chat-store now reads from session-store directly
 
   // Load the dev server URL into the proxy
-  const loadApp = useCallback(async () => {
-    if (!targetUrl) return
+  const loadApp = useCallback(async (urlOverride?: string) => {
+    const urlToLoad = urlOverride || targetUrl
+    if (!urlToLoad) return
 
     try {
       await fetch(`${HTTP_BACKEND_URL}/config/app-proxy`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ target_url: targetUrl }),
+        body: JSON.stringify({ target_url: urlToLoad }),
       })
 
       // Clear selections when loading new app
@@ -115,13 +116,20 @@ export function LiveEditorPane() {
     }
   }, [])
 
-  // Load app on mount if devServerUrl is set
+  // Sync targetUrl from devServerUrl when it changes (e.g., after store hydration)
   useEffect(() => {
-    if (devServerUrl) {
+    if (devServerUrl && devServerUrl !== targetUrl) {
       setTargetUrl(devServerUrl)
+    }
+  }, [devServerUrl, targetUrl])
+
+  // Auto-load when targetUrl changes to a non-default value
+  useEffect(() => {
+    if (targetUrl && targetUrl !== 'http://localhost:3000') {
       loadApp()
     }
-  }, [devServerUrl])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [targetUrl])
 
   // Toggle select mode
   const toggleSelectMode = useCallback(() => {
@@ -200,7 +208,7 @@ export function LiveEditorPane() {
             placeholder="http://localhost:3000"
             className="flex-1 h-8"
           />
-          <Button variant="outline" size="sm" onClick={loadApp} className="h-8">
+          <Button variant="outline" size="sm" onClick={() => loadApp()} className="h-8">
             <Play className="w-4 h-4 mr-1" />
             Load
           </Button>
