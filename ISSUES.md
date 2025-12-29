@@ -1,7 +1,7 @@
 # Issues & Spike Tasks
 
 **Blueprint**: `BLUEPRINT-rework-claude-code-integration-20251212.yaml`
-**Last Updated**: 2025-12-28
+**Last Updated**: 2025-12-29
 **Purpose**: Track spike tasks, high-uncertainty items, and blocking issues for Claude Code SDK integration
 
 ---
@@ -14,35 +14,20 @@
 ### Known Issues
 
 #### ISSUE-LE-001: Chat Textarea Unresponsive After Hard Refresh
-**Status**: 🟡 Open (manual workaround available)
+**Status**: ✅ Fixed (2025-12-29)
 **Severity**: Medium - affects UX on page reload
 
 **Symptoms**:
 - After hard refresh (Ctrl+Shift+R), the chat textarea is unclickable/unresponsive
 - Issue does NOT occur on soft refresh or after tab switching
 
-**Manual Workaround**:
-1. Click "Elements" or "Settings" tab
-2. Click back to "Chat" tab
-3. Textarea becomes responsive
+**Solution**:
+Added two fixes to ChatInput.tsx:
+1. Focus-on-mount useEffect with 100ms delay to handle iframe focus conflicts
+2. Click handler on container div to ensure focus reaches textarea on user click
 
-**Root Cause Hypothesis**:
-- Conflict with iframe's embedded Pip chat interface on initial page load
-- Radix UI Tabs initialization timing issue
-- Auto tab-switching workaround (programmatic) does not work reliably
-
-**Investigation Attempts**:
-- ❌ useLayoutEffect with reflow forcing
-- ❌ forceMount on TabsContent
-- ❌ Controlled tabs with auto tab-switching (500ms→600ms delays)
-- ❌ Moving ChatInput outside Tabs component
-- ❌ CSS isolation (z-index, pointer-events, isolate)
-- ❌ tabIndex={-1} on iframe
-
-**Next Steps**:
-- Investigate iframe focus/pointer-events interaction on load
-- Consider lazy-loading iframe after chat initialization
-- Test with non-Pip target app (isolate iframe content as cause)
+**Root Cause**:
+Iframe was capturing focus on page load before the textarea could receive it. The delayed focus and explicit click handler ensure the textarea gets focus regardless of iframe timing.
 
 ---
 
@@ -68,17 +53,16 @@
 
 ### Next Steps for Live Editor v2
 
-1. **Fix textarea responsiveness** - Priority P1
-   - Root cause analysis needed
-   - May require architectural changes to iframe/tabs interaction
+1. ~~**Fix textarea responsiveness** - Priority P1~~ ✅ Fixed (2025-12-29)
+   - Resolved with focus-on-mount and click handler in ChatInput.tsx
 
 2. **Tool activity visualization** - Priority P2
    - ToolCard component exists but needs styling/polish
    - Show file edits, searches, etc. in chat stream
 
-3. **Multi-element selection** - Priority P2
-   - Currently supports single element selection
-   - Blueprint calls for persistent selection with multi-select
+3. ~~**Multi-element selection** - Priority P2~~ ✅ Working (2025-12-29)
+   - Multi-select with Ctrl+Click implemented and tested
+   - Element count indicator shows in chat input
 
 4. **Pip app integration testing** - Blocked
    - Requires local dev OpenBao API keys for Pip
