@@ -211,6 +211,17 @@ export function LiveEditorPane() {
     }
   }, [clearElements])
 
+  // Handle removing a single element (sync to iframe)
+  const handleRemoveElement = useCallback((id: string, xpath: string) => {
+    removeElement(id)
+    if (iframeRef.current?.contentWindow) {
+      iframeRef.current.contentWindow.postMessage(
+        { type: 'pixel-forge-deselect', xpath },
+        '*'
+      )
+    }
+  }, [removeElement])
+
   return (
     <div className="flex h-full overflow-hidden">
       {/* Left: App Viewer */}
@@ -303,7 +314,10 @@ export function LiveEditorPane() {
               value="elements"
               className="h-full overflow-y-auto m-0 p-3"
             >
-              <SelectedElementsList />
+              <SelectedElementsList
+                onClearAll={handleClearElements}
+                onRemoveElement={handleRemoveElement}
+              />
             </TabsContent>
 
             {/* Settings Tab */}

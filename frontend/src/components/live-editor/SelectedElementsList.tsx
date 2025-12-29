@@ -74,9 +74,27 @@ function SelectedElementChip({
   )
 }
 
-export function SelectedElementsList() {
+interface SelectedElementsListProps {
+  onClearAll?: () => void
+  onRemoveElement?: (id: string, xpath: string) => void
+}
+
+export function SelectedElementsList({
+  onClearAll,
+  onRemoveElement,
+}: SelectedElementsListProps = {}) {
   const { selectedElements, removeElement, clearElements } =
     useLiveEditorStore()
+
+  // Use provided handlers or fall back to store-only operations
+  const handleClearAll = onClearAll || clearElements
+  const handleRemove = (id: string, xpath: string) => {
+    if (onRemoveElement) {
+      onRemoveElement(id, xpath)
+    } else {
+      removeElement(id)
+    }
+  }
 
   if (selectedElements.length === 0) {
     return (
@@ -101,7 +119,7 @@ export function SelectedElementsList() {
         <Button
           variant="ghost"
           size="sm"
-          onClick={clearElements}
+          onClick={handleClearAll}
           className="h-6 text-xs text-muted-foreground hover:text-foreground"
         >
           Clear all
@@ -116,7 +134,7 @@ export function SelectedElementsList() {
               key={element.id}
               element={element}
               index={index}
-              onRemove={() => removeElement(element.id)}
+              onRemove={() => handleRemove(element.id, element.xpath)}
             />
           ))}
         </div>
