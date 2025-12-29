@@ -59,24 +59,37 @@ The sidebar now only renders in Screenshot-to-Code mode, giving Live Editor full
 
 ---
 
-#### ISSUE-LE-003: Multi-Select Ctrl+Click May Pass Through to Iframe
-**Status**: 🟡 Needs Investigation
-**Severity**: Low - workaround available
+#### ISSUE-LE-003: Clicks Pass Through to Iframe After Navigation/Reload
+**Status**: ✅ Fixed (2025-12-29)
+**Severity**: Low
 **Reported**: 2025-12-29
 
 **Symptoms**:
-- When trying to Ctrl+Click to add additional elements to selection
-- Click sometimes triggers iframe's actual functionality instead of adding to selection
-- Example: Ctrl+Click on "Invoices" button opened the Invoices dropdown in Pip app
+- After iframe navigation or HMR reload, clicks would pass through to app instead of selecting elements
+- Parent showed "Selecting" (green) but iframe's `selectMode` was reset to `false`
+- State desync between parent and iframe after reload
 
-**Workaround**:
-- Click elements individually, selection persists between clicks
+**Root Cause**:
+When iframe reloads (navigation, HMR, refresh), the injected script re-initializes with `selectMode = false`, but the parent component doesn't re-send the current state.
 
-**Investigation Needed**:
-- Check if selection overlay properly intercepts Ctrl+Click events
-- May need to preventDefault on modifier key clicks in iframe overlay
+**Solution**:
+Added `onLoad` handler to iframe in `LiveEditorPane.tsx` that re-syncs `selectMode` state after iframe loads:
+```tsx
+const handleIframeLoad = useCallback(() => {
+  setTimeout(() => {
+    if (iframeRef.current?.contentWindow && selectMode) {
+      iframeRef.current.contentWindow.postMessage(
+        { type: 'pixel-forge-toggle-select', enabled: true },
+        '*'
+      )
+    }
+  }, 100)
+}, [selectMode])
 
-**Priority**: P3 - minor issue
+<iframe ... onLoad={handleIframeLoad} />
+```
+
+**Note**: Multi-select was already working in claude-proxy's `app_proxy.py` - the issue was only state desync on reload.
 
 ---
 

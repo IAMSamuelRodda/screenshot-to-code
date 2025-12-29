@@ -154,6 +154,22 @@ export function LiveEditorPane() {
     }
   }, [selectMode])
 
+  // Re-sync selectMode to iframe after it loads (handles navigation, HMR, etc.)
+  const handleIframeLoad = useCallback(() => {
+    // Give the injected script time to initialize
+    setTimeout(() => {
+      if (iframeRef.current?.contentWindow && selectMode) {
+        iframeRef.current.contentWindow.postMessage(
+          {
+            type: 'pixel-forge-toggle-select',
+            enabled: true,
+          },
+          '*'
+        )
+      }
+    }, 100)
+  }, [selectMode])
+
   // Listen for messages from iframe
   useEffect(() => {
     const handleMessage = (e: MessageEvent) => {
@@ -244,6 +260,7 @@ export function LiveEditorPane() {
             ref={iframeRef}
             src={`${HTTP_BACKEND_URL}/app/`}
             className="w-full h-full border-0"
+            onLoad={handleIframeLoad}
           />
         </div>
       </div>
