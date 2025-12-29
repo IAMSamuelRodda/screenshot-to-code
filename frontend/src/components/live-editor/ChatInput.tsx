@@ -41,6 +41,19 @@ export function ChatInput() {
     }
   }, [input])
 
+  // Focus textarea on mount with delay to handle iframe focus conflicts
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      textareaRef.current?.focus()
+    }, 100)
+    return () => clearTimeout(timer)
+  }, [])
+
+  // Handle click on container to ensure focus reaches textarea
+  const handleContainerClick = () => {
+    textareaRef.current?.focus()
+  }
+
 
   const canSubmit = input.trim() && !isStreaming
   const hasElements = selectedElements.length > 0
@@ -58,7 +71,11 @@ export function ChatInput() {
         </div>
       )}
 
-      <div className="bg-muted rounded-xl relative" style={{ pointerEvents: 'auto' }}>
+      <div
+        className="bg-muted rounded-xl relative cursor-text"
+        style={{ pointerEvents: 'auto' }}
+        onClick={handleContainerClick}
+      >
         <div className="px-3 pt-3 pb-2">
           <textarea
             ref={textareaRef}
